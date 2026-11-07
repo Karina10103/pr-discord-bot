@@ -1,0 +1,27 @@
+name: Notify Discord on new PR
+
+on:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send to Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          TITLE: ${{ github.event.pull_request.title }}
+          URL: ${{ github.event.pull_request.html_url }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          BASE: ${{ github.event.pull_request.base.ref }}
+          HEAD: ${{ github.event.pull_request.head.ref }}
+        run: |
+          payload=$(jq -n \
+            --arg title "#$NUMBER $TITLE" \
+            --arg url "$URL" \
+            --arg desc "$AUTHOR wants to merge \`$HEAD\` -> \`$BASE\` in $REPO" \
+            '{embeds: [{title: $title, url: $url, description: $desc, color: 5814783}]}')
+          curl -sf -H "Content-Type: application/json" -d "$payload" "$WEBHOOK"
